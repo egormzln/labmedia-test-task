@@ -19,20 +19,12 @@ class PokemonTableViewCell: UITableViewCell {
     private let nameLabel: UILabel = {
         let lbl = UILabel()
         lbl.numberOfLines = 0
-        lbl.font = .systemFont(ofSize: 18, weight: .bold)
+        lbl.font = .systemFont(ofSize: 18, weight: .semibold)
         return lbl
     }()
 
-    private let expLabel: UILabel = {
+    private let numLabel: UILabel = {
         let lbl = UILabel()
-        lbl.numberOfLines = 0
-        lbl.font = .systemFont(ofSize: 12, weight: .regular)
-        return lbl
-    }()
-
-    private let weightLabel: UILabel = {
-        let lbl = UILabel()
-        lbl.translatesAutoresizingMaskIntoConstraints = false
         lbl.numberOfLines = 0
         lbl.font = .systemFont(ofSize: 12, weight: .regular)
         return lbl
@@ -51,7 +43,7 @@ class PokemonTableViewCell: UITableViewCell {
     }
 
     func setupCell() {
-        for item in [pokemonImage, nameLabel, expLabel, weightLabel] {
+        for item in [pokemonImage, nameLabel, numLabel] {
             item.translatesAutoresizingMaskIntoConstraints = false
             contentView.addSubview(item)
         }
@@ -63,24 +55,18 @@ class PokemonTableViewCell: UITableViewCell {
             pokemonImage.widthAnchor.constraint(equalToConstant: 50),
 
             nameLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
-            nameLabel.leadingAnchor.constraint(equalTo: pokemonImage.trailingAnchor, constant: 8),
+            nameLabel.leadingAnchor.constraint(equalTo: pokemonImage.trailingAnchor, constant: 16),
             nameLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
 
-            weightLabel.topAnchor.constraint(equalTo: nameLabel.bottomAnchor),
-            weightLabel.leadingAnchor.constraint(equalTo: pokemonImage.trailingAnchor, constant: 8),
-            weightLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-
-            expLabel.topAnchor.constraint(equalTo: weightLabel.bottomAnchor),
-            expLabel.leadingAnchor.constraint(equalTo: pokemonImage.trailingAnchor, constant: 8),
-            expLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            expLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16)
+            numLabel.topAnchor.constraint(equalTo: nameLabel.bottomAnchor),
+            numLabel.leadingAnchor.constraint(equalTo: pokemonImage.trailingAnchor, constant: 16),
+            numLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24),
         ])
     }
 
     func configure(with pokemon: Pokemon) {
-        nameLabel.text = pokemon.name.uppercased()
-        weightLabel.text = "Weight: \(pokemon.weight)g"
-        expLabel.text = "Exp: \(pokemon.baseExperience)"
+        nameLabel.text = pokemon.name.capitalizingFirstWord()
+        numLabel.text = String(format: "#%03d", pokemon.id)
 
         if let imageUrl = URL(string: pokemon.sprites.other.officialArtwork.frontDefault) {
             currentImageURL = imageUrl

@@ -21,7 +21,7 @@ class PokemonRepository: PokemonRepositoryProtocol {
     func fetchPockemons(_ limit: Int = 20, _ offset: Int = 0) async throws -> [Pokemon] {
         var pokemons: [Pokemon] = []
         
-        print("Starting fetch pokemons...")
+        print("[info] Starting fetch pokemons...")
         
         let poemonsList = try await getPokemonsList(limit, offset)
         
@@ -42,9 +42,9 @@ class PokemonRepository: PokemonRepositoryProtocol {
             
             pokemons.append(pokemon)
             
-            print("Fetched: \(pokemon.name) img: \(pokemon.sprites.other.officialArtwork.frontDefault)")
+            print("[info] Fetched: \(pokemon.name) id: \(pokemon.id)")
         }
-        print("Stop fetching pokemons.")
+        print("[info] Stop fetching pokemons.")
         return pokemons
     }
     

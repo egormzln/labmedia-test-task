@@ -13,14 +13,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = (scene as? UIWindowScene) else { return }
 
-        let homeWindow: UIWindow = UIWindow(windowScene: windowScene)
+        let homeWindow = UIWindow(windowScene: windowScene)
 
         let rootViewController = PokemonListViewController()
         let nav = UINavigationController(rootViewController: rootViewController)
-        
+
         homeWindow.rootViewController = nav
 
-//        homeWindow.rootViewController = PokemonListViewController()
         self.window = homeWindow
         homeWindow.makeKeyAndVisible()
     }

@@ -8,6 +8,16 @@
 import UIKit
 
 class PokemonListViewController: UIViewController {
+    // MARK: - Variables
+
+    private let repository = PokemonRepository()
+
+    private lazy var model = PokemonListModel(repository: repository)
+
+    private lazy var viewModel = PokemonListViewModel(model: model)
+
+    // MARK: - UI Components
+
     private let tableView: UITableView = {
         let tv = UITableView()
         tv.translatesAutoresizingMaskIntoConstraints = false
@@ -19,23 +29,25 @@ class PokemonListViewController: UIViewController {
         return tv
     }()
 
-    private let repository = PokemonRepository()
+    private let activityIndicator = UIActivityIndicatorView(style: .large)
 
-    private lazy var model = PokemonListModel(repository: repository)
+    private let searchController = UISearchController(searchResultsController: nil)
 
-    private lazy var viewModel = PokemonListViewModel(model: model)
-
-    let activityIndicator = UIActivityIndicatorView(style: .large)
+    // MARK: - Lyfecicle
 
     override func viewDidLoad() {
         super.viewDidLoad()
         setupView()
         loadData()
+        setupSearchController()
+        setupScopeBar()
     }
 }
 
+// MARK: - UI Setup
+
 private extension PokemonListViewController {
-    func setupView() {
+    private func setupView() {
         view.backgroundColor = .systemBackground
         navigationItem.title = "Pokemons"
 
@@ -44,8 +56,8 @@ private extension PokemonListViewController {
         activityIndicator.center = view.center
         activityIndicator.hidesWhenStopped = true
 
-        view.addSubview(activityIndicator)
         view.addSubview(tableView)
+        view.addSubview(activityIndicator)
 
         tableView.delegate = self
         tableView.dataSource = self
@@ -58,42 +70,132 @@ private extension PokemonListViewController {
         ])
     }
 
-    func loadData() {
-        // Start animating indicator before fetching data
+    private func loadData() {
         activityIndicator.startAnimating()
 
         Task {
             await viewModel.fetchPockemons()
 
-            // Stop and remove indicator, then reload table view
             DispatchQueue.main.async {
-                self.activityIndicator.stopAnimating()
                 self.activityIndicator.removeFromSuperview()
+                self.activityIndicator.stopAnimating()
                 self.tableView.reloadData()
             }
         }
     }
+
+    private func setupSearchController() {
+        searchController.searchResultsUpdater = self
+        searchController.obscuresBackgroundDuringPresentation = false
+        searchController.hidesNavigationBarDuringPresentation = false
+        searchController.searchBar.placeholder = "Search Pokemons"
+
+        navigationItem.searchController = searchController
+        definesPresentationContext = true
+        navigationItem.hidesSearchBarWhenScrolling = true
+    }
 }
+
+// MARK: - UISearchResultsUpdating Setup
+
+extension PokemonListViewController: UISearchResultsUpdating {
+    func updateSearchResults(for searchController: UISearchController) {
+        viewModel.isSearchActive = !(searchController.searchBar.text?.isEmpty ?? true)
+
+        if viewModel.isSearchActive {
+            guard let searchText = searchController.searchBar.text?.lowercased() else { return }
+            viewModel.searchPokemons(searchText)
+            tableView.reloadData()
+        }
+    }
+}
+
+// MARK: - UITableView Setup
 
 extension PokemonListViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return viewModel.pokemons.count
+        if viewModel.isSearchActive || viewModel.isFilterActive {
+            return viewModel.filteredPokemonsList.count
+        } else {
+            return viewModel.defaultPokemonsList.count
+        }
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         guard let cell = tableView.dequeueReusableCell(withIdentifier: PokemonTableViewCell.cellID, for: indexPath) as? PokemonTableViewCell else {
             fatalError()
         }
-        cell.configure(with: viewModel.pokemons[indexPath.row])
+
+        if viewModel.isSearchActive || viewModel.isFilterActive {
+            cell.configure(with: viewModel.filteredPokemonsList[indexPath.row])
+        } else {
+            cell.configure(with: viewModel.defaultPokemonsList[indexPath.row])
+        }
+
         return cell
     }
 }
 
 extension PokemonListViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        // Handle the tap here
-        print("Cell tapped at row \(indexPath.row)")
-        // Optionally, deselect the row with animation
+        print("[info] Cell tapped at row \(indexPath.row)")
         tableView.deselectRow(at: indexPath, animated: true)
+
+        var selectedPokemon: Pokemon
+
+        if viewModel.isSearchActive || viewModel.isFilterActive {
+            selectedPokemon = viewModel.filteredPokemonsList[indexPath.row]
+        } else {
+            selectedPokemon = viewModel.defaultPokemonsList[indexPath.row]
+        }
+
+        let detailsVC = PokemonDetailsViewController()
+        detailsVC.pokemon = selectedPokemon
+
+        navigationController?.pushViewController(detailsVC, animated: true)
+    }
+
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        let position = scrollView.contentOffset.y
+        let contentHeight = scrollView.contentSize.height
+        let frameHeight = scrollView.frame.size.height
+
+        if !viewModel.pokemonsData.isEmpty && !viewModel.isLoadingData && position > contentHeight - frameHeight {
+            print("[debug] Pagination starting...")
+
+            Task {
+                await viewModel.loadMoreData()
+
+                DispatchQueue.main.async {
+                    self.tableView.reloadData()
+                }
+            }
+        }
+    }
+}
+
+extension PokemonListViewController: UISearchBarDelegate {
+    private func setupScopeBar() {
+        searchController.searchBar.delegate = self
+
+        if #available(iOS 16.0, *) {
+            searchController.scopeBarActivation = .onSearchActivation
+        } else {
+            searchController.automaticallyShowsScopeBar = true
+        }
+        searchController.searchBar.scopeButtonTitles = [PokemonFilter.id.rawValue, PokemonFilter.name.rawValue]
+    }
+
+    func searchBar(_ searchBar: UISearchBar, selectedScopeButtonIndexDidChange selectedScope: Int) {
+        let filter = PokemonFilter.byID(selectedScope)
+        viewModel.filterPokemons(by: filter)
+        tableView.reloadData()
+    }
+
+    func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
+        viewModel.isFilterActive = false
+        viewModel.isSearchActive = false
+        searchController.searchBar.selectedScopeButtonIndex = 0
+        tableView.reloadData()
     }
 }
