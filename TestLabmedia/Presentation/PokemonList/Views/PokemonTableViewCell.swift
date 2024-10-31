@@ -30,8 +30,6 @@ class PokemonTableViewCell: UITableViewCell {
         return lbl
     }()
 
-    private var currentImageURL: URL?
-
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         setupCell()
@@ -67,32 +65,10 @@ class PokemonTableViewCell: UITableViewCell {
     func configure(with pokemon: Pokemon) {
         nameLabel.text = pokemon.name.capitalizingFirstWord()
         numLabel.text = String(format: "#%03d", pokemon.id)
-
-        if let imageUrl = URL(string: pokemon.sprites.other.officialArtwork.frontDefault) {
-            currentImageURL = imageUrl
-            loadImage(from: imageUrl)
-        } else {
-            pokemonImage.image = nil
-        }
-    }
-
-    private func loadImage(from url: URL) {
-        pokemonImage.image = nil
-
-        URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
-            guard let self = self, let data = data, error == nil else { return }
-
-            if url == self.currentImageURL {
-                DispatchQueue.main.async {
-                    self.pokemonImage.image = UIImage(data: data)
-                }
-            }
-        }.resume()
+        pokemonImage.loadImage(pokemon.sprites.other.officialArtwork.frontDefault)
     }
 
     override func prepareForReuse() {
         super.prepareForReuse()
-        pokemonImage.image = nil
-        currentImageURL = nil
     }
 }

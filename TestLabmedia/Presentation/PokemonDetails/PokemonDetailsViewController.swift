@@ -8,7 +8,11 @@
 import UIKit
 
 class PokemonDetailsViewController: UIViewController {
-    var pokemon: Pokemon!
+    // MARK: - Variables
+
+    var pokemon: Pokemon?
+
+    // MARK: - UI Components
 
     private let scrollView: UIScrollView = {
         let scrollView = UIScrollView()
@@ -47,14 +51,35 @@ class PokemonDetailsViewController: UIViewController {
         return stackView
     }()
 
+    // MARK: - Lyfecicle
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        loadImage()
         setupView()
     }
+}
 
+// MARK: - UI Setup
+
+private extension PokemonDetailsViewController {
     private func setupView() {
         view.backgroundColor = .systemBackground
+
+        // MARK: - PokemonDetails error body
+
+        guard let pokemon = pokemon else {
+            basicStatsLabel.text = "Pokemon not found!"
+
+            view.addSubview(basicStatsLabel)
+
+            NSLayoutConstraint.activate([
+                basicStatsLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+                basicStatsLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            ])
+            return
+        }
+
+        // MARK: - PokemonDetails default body
 
         navigationItem.title = pokemon.name.capitalizingFirstWord()
 
@@ -66,6 +91,8 @@ class PokemonDetailsViewController: UIViewController {
         contentView.addSubview(pokemonImage)
         contentView.addSubview(basicStatsLabel)
         contentView.addSubview(extraStatsView)
+
+        pokemonImage.loadImage(pokemon.sprites.other.officialArtwork.frontDefault)
 
         for i in 0 ..< pokemon.stats.count {
             let horizontalStackView = UIStackView()
@@ -120,22 +147,5 @@ class PokemonDetailsViewController: UIViewController {
             extraStatsView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
             extraStatsView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
         ])
-    }
-
-    private func loadImage() {
-        pokemonImage.image = nil
-
-        if let imageUrl = URL(string: pokemon.sprites.other.officialArtwork.frontDefault) {
-            URLSession.shared.dataTask(with: imageUrl) { [weak self] data, _, error in
-                guard let self = self, let data = data, error == nil else { return }
-
-                DispatchQueue.main.async {
-                    self.pokemonImage.image = UIImage(data: data)
-                }
-
-            }.resume()
-        } else {
-            pokemonImage.image = nil
-        }
     }
 }
